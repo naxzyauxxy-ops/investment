@@ -28,32 +28,6 @@
                 </configuration>
             </plugin>
 
-            <!--
-                We install the original v1.2 JAR into the local Maven repo so it can
-                be used as a 'provided' compile-time dependency. Our 3 new/patched
-                source files compile against its classes. The shade step then merges
-                BOTH the original classes AND our new classes into the final output JAR.
-            -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <version>3.1.2</version>
-                <executions>
-                    <execution>
-                        <id>install-original-jar</id>
-                        <phase>initialize</phase>
-                        <goals><goal>install-file</goal></goals>
-                        <configuration>
-                            <file>${project.basedir}/lib/Invest-original.jar</file>
-                            <groupId>de.elivb</groupId>
-                            <artifactId>Invest-original</artifactId>
-                            <version>1.2</version>
-                            <packaging>jar</packaging>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -65,9 +39,12 @@
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <!--
-                                Include the original JAR (brings in all original classes)
-                                but exclude Bukkit/PAPI/Vault — they are provided at runtime.
+                                includeSystemScope=true pulls in the system-scoped
+                                Invest-original.jar so its classes end up in the final JAR.
+                                Our patched classes (SignManager, PlaceholderManager) override
+                                the originals via the exclusion filter below.
                             -->
+                            <includeSystemScope>true</includeSystemScope>
                             <artifactSet>
                                 <includes>
                                     <include>de.elivb:Invest-original</include>
@@ -80,7 +57,7 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
-                                        <!-- Our new/patched classes override the originals -->
+                                        <!-- Our patched classes override the originals -->
                                         <exclude>de/elivb/investment/managers/SignManager*.class</exclude>
                                         <exclude>de/elivb/investment/managers/PlaceholderManager.class</exclude>
                                     </excludes>
@@ -125,7 +102,8 @@
             <groupId>de.elivb</groupId>
             <artifactId>Invest-original</artifactId>
             <version>1.2</version>
-            <scope>provided</scope>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/Invest-original.jar</systemPath>
         </dependency>
 
         <!-- Server API -->
