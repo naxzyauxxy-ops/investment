@@ -6,7 +6,7 @@
 
     <groupId>de.elivb</groupId>
     <artifactId>Invest</artifactId>
-    <version>1.3-SNAPSHOT</version>
+    <version>1.3</version>
     <packaging>jar</packaging>
     <name>Invest</name>
 
@@ -27,6 +27,33 @@
                     <target>${java.version}</target>
                 </configuration>
             </plugin>
+
+            <!--
+                We install the original v1.2 JAR into the local Maven repo so it can
+                be used as a 'provided' compile-time dependency. Our 3 new/patched
+                source files compile against its classes. The shade step then merges
+                BOTH the original classes AND our new classes into the final output JAR.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>3.1.2</version>
+                <executions>
+                    <execution>
+                        <id>install-original-jar</id>
+                        <phase>initialize</phase>
+                        <goals><goal>install-file</goal></goals>
+                        <configuration>
+                            <file>${project.basedir}/lib/Invest-original.jar</file>
+                            <groupId>de.elivb</groupId>
+                            <artifactId>Invest-original</artifactId>
+                            <version>1.2</version>
+                            <packaging>jar</packaging>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -37,6 +64,15 @@
                         <goals><goal>shade</goal></goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <!--
+                                Include the original JAR (brings in all original classes)
+                                but exclude Bukkit/PAPI/Vault — they are provided at runtime.
+                            -->
+                            <artifactSet>
+                                <includes>
+                                    <include>de.elivb:Invest-original</include>
+                                </includes>
+                            </artifactSet>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -44,6 +80,9 @@
                                         <exclude>META-INF/*.SF</exclude>
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
+                                        <!-- Our new/patched classes override the originals -->
+                                        <exclude>de/elivb/investment/managers/SignManager*.class</exclude>
+                                        <exclude>de/elivb/investment/managers/PlaceholderManager.class</exclude>
                                     </excludes>
                                 </filter>
                             </filters>
@@ -52,6 +91,7 @@
                 </executions>
             </plugin>
         </plugins>
+
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
@@ -80,24 +120,39 @@
     </repositories>
 
     <dependencies>
+        <!-- Original JAR — provides all existing classes at compile time -->
+        <dependency>
+            <groupId>de.elivb</groupId>
+            <artifactId>Invest-original</artifactId>
+            <version>1.2</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Server API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.21.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>com.github.MilkBowl</groupId>
-            <artifactId>VaultAPI</artifactId>
-            <version>1.7</version>
-            <scope>provided</scope>
-        </dependency>
+
+        <!-- PlaceholderAPI -->
         <dependency>
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
             <version>2.11.6</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- Vault -->
+        <dependency>
+            <groupId>com.github.MilkBowl</groupId>
+            <artifactId>VaultAPI</artifactId>
+            <version>1.7</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- MySQL -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>

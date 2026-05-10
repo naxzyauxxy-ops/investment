@@ -3,86 +3,60 @@ package de.elivb.investment.util;
 import java.util.List;
 
 /**
- * Parses monetary amounts from strings, supporting abbreviations.
+ * Parses monetary amounts from player input, supporting abbreviations.
  *
- * Supported abbreviations (case-insensitive, configurable):
- *   K  = 1,000
- *   M  = 1,000,000
- *   B  = 1,000,000,000
- *   T  = 1,000,000,000,000
+ * Supported (case-insensitive, list from config):
+ *   K = 1,000  |  M = 1,000,000  |  B = 1,000,000,000  |  T = 1,000,000,000,000
  *
- * Examples:  "1k" → 1000.0,  "2.5M" → 2500000.0,  "all" → special sentinel
+ * "all" / "max" → returns {@link #ALL} sentinel so callers collect everything.
  */
-public class AmountParser {
+public final class AmountParser {
 
-    /** Sentinel returned when the player typed "all" or "max". */
-    public static final double ALL = -1.0;
+    /** Sentinel: player typed "all" or "max" → caller should use maximum available. */
+    public static final double ALL = Double.NEGATIVE_INFINITY;
 
     private AmountParser() {}
 
     /**
-     * Parse an amount string using the provided abbreviation list.
+     * Parse a player's amount string.
      *
-     * @param input         raw player input (e.g. "1.5m", "500K", "all")
-     * @param abbrevFormats list of suffix strings from config (e.g. ["K","M","B","T"])
-     * @param useAbbrev     whether abbreviations are enabled in config
-     * @return parsed double value, or {@code ALL} sentinel, or {@code null} if invalid
+     * @param input         raw input  (e.g. "1.5m", "500K", "all")
+     * @param abbrevFormats suffix list from config  (e.g. ["K","M","B","T"])
+     * @param useAbbrev     whether abbreviations are enabled
+     * @return parsed value, {@link #ALL}, or {@code null} if invalid
      */
     public static Double parse(String input, List<String> abbrevFormats, boolean useAbbrev) {
         if (input == null || input.isBlank()) return null;
 
         String s = input.trim();
 
-        // "all" / "max" returns the sentinel so callers can use max available
-        if (s.equalsIgnoreCase("all") || s.equalsIgnoreCase("max")) {
-            return ALL;
-        }
+        if (s.equalsIgnoreCase("all") || s.equalsIgnoreCase("max")) return ALL;
 
         if (useAbbrev && abbrevFormats != null && !abbrevFormats.isEmpty()) {
             String upper = s.toUpperCase();
-            double multiplier = 1.0;
-            boolean matched = false;
 
-            // Default suffix → multiplier map (order matters — check longer first if needed)
+            // Multipliers match config order: K, M, B, T …
             double[] multipliers = {1_000.0, 1_000_000.0, 1_000_000_000.0, 1_000_000_000_000.0};
 
             for (int i = 0; i < abbrevFormats.size(); i++) {
                 String suffix = abbrevFormats.get(i).toUpperCase();
                 if (upper.endsWith(suffix)) {
-                    multiplier = (i < multipliers.length) ? multipliers[i] : Math.pow(1000, i + 1);
-                    s = upper.substring(0, upper.length() - suffix.length()).trim();
-                    matched = true;
-                    break;
-                }
-            }
-
-            if (matched || !upper.equals(s.toUpperCase())) {
-                try {
-                    return Double.parseDouble(s) * multiplier;
-                } catch (NumberFormatException e) {
-                    return null;
+                    double mult = (i < multipliers.length) ? multipliers[i] : Math.pow(1000, i + 1);
+                    String numeric = upper.substring(0, upper.length() - suffix.length()).trim();
+                    try {
+                        return Double.parseDouble(numeric) * mult;
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
                 }
             }
         }
 
-        // Plain number fallback
+        // Plain number
         try {
             return Double.parseDouble(s);
         } catch (NumberFormatException e) {
             return null;
         }
-    }
-
-    /**
-     * Format a double into an abbreviated string for display.
-     * e.g. 1500000 → "$1.5M"
-     */
-    public static String format(double value, java.text.DecimalFormat fmt) {
-        double abs = Math.abs(value);
-        if (abs >= 1_000_000_000_000.0) return "$" + fmt.format(value / 1_000_000_000_000.0) + "T";
-        if (abs >= 1_000_000_000.0)     return "$" + fmt.format(value / 1_000_000_000.0) + "B";
-        if (abs >= 1_000_000.0)         return "$" + fmt.format(value / 1_000_000.0) + "M";
-        if (abs >= 1_000.0)             return "$" + fmt.format(value / 1_000.0) + "K";
-        return "$" + fmt.format(value);
     }
 }

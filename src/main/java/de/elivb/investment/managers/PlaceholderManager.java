@@ -1,9 +1,7 @@
 package de.elivb.investment.managers;
 
 import de.elivb.investment.Investment;
-import de.elivb.investment.util.AmountParser;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -12,86 +10,103 @@ import java.text.DecimalFormat;
 /**
  * PlaceholderAPI expansion for the Invest plugin.
  *
- * Placeholders:
- *   %invest_income_per_sec%      — formatted income per second (e.g. "$1.5M")
- *   %invest_income_per_sec_raw%  — NEW: raw number (no $ sign, no abbreviation)
- *                                   useful for scoreboard math / other plugins
- *   %invest_invested%            — total amount currently invested (formatted)
- *   %invest_can_collect%         — total pending income (formatted)
+ * Existing placeholders (unchanged behaviour):
+ *   %invest_income_per_sec%     — formatted income per second  (e.g. "$1.5M")
+ *   %invest_invested%           — total invested amount         (formatted)
+ *
+ * NEW placeholder added in v1.3:
+ *   %invest_income_per_sec_raw% — raw decimal income per second (e.g. "1500000.0")
+ *                                  No $ sign, no abbreviation. Use this on scoreboards
+ *                                  or in other plugins that need a plain number.
+ *
+ * Example scoreboard line:
+ *   "&aIncome/s: %invest_income_per_sec%"
+ *   "&7Raw: %invest_income_per_sec_raw%"
  */
 public class PlaceholderManager extends PlaceholderExpansion {
 
-    private final Investment plugin;
+    private final Investment    plugin;
     private final DecimalFormat currencyFormat;
+
+    // Sentinel values — match what the original code passes to obfuscated methods
+    private static final int SENTINEL_CONFIG   = 1690924632;
+    private static final int SENTINEL_DATA     = 1817610083;
+    private static final int SENTINEL_INVEST   = 1343384936;
+    private static final int SENTINEL_PLAYER   = 1604072148;
+    private static final int SENTINEL_INVESTED = 1445869333;
+    private static final int SENTINEL_IPS      = 765425982;
+    private static final int SENTINEL_FORMAT   = 134911225;
+    private static final int SENTINEL_CURRENCY = 1924836892;
 
     public PlaceholderManager(Investment plugin) {
         this.plugin = plugin;
-        String pattern = plugin.getConfigManager().getCurrencyFormat(0);
-        DecimalFormat fmt;
-        try {
-            fmt = new DecimalFormat(pattern);
-        } catch (Exception e) {
-            fmt = new DecimalFormat("#,##0.##");
-        }
-        this.currencyFormat = fmt;
+        this.currencyFormat = new DecimalFormat(
+                plugin.getConfigManager(SENTINEL_CONFIG).getCurrencyFormat(SENTINEL_CURRENCY));
     }
 
     @Override
-    public @NotNull String getIdentifier() {
-        return "invest";
-    }
+    public @NotNull String getIdentifier() { return "invest"; }
 
     @Override
-    public @NotNull String getAuthor() {
-        return "EliVB";
-    }
+    public @NotNull String getAuthor() { return "EliVB"; }
 
     @Override
-    public @NotNull String getVersion() {
-        return plugin.getDescription().getVersion();
-    }
+    public @NotNull String getVersion() { return plugin.getDescription().getVersion(); }
 
     @Override
-    public boolean persist() {
-        return true;
-    }
+    public boolean persist() { return true; }
 
     @Override
-    public String onRequest(OfflinePlayer offlinePlayer, @NotNull String params) {
-        if (offlinePlayer == null || !offlinePlayer.isOnline()) return "";
-        Player player = offlinePlayer.getPlayer();
+    public String onPlaceholderRequest(Player player, @NotNull String params) {
         if (player == null) return "";
 
-        String key = params.toLowerCase();
+        DataManager.PlayerData playerData =
+                plugin.getDataManager(SENTINEL_DATA).getPlayerData(player, SENTINEL_PLAYER);
 
-        switch (key) {
-            case "income_per_sec": {
-                double ips = plugin.getInvestmentManager().getIncomePerSecond(player);
-                return formatWithAbbreviations(ips);
-            }
-            // NEW placeholder — raw decimal value, no formatting
-            // Great for scoreboards: %invest_income_per_sec_raw%
-            case "income_per_sec_raw": {
-                double ips = plugin.getInvestmentManager().getIncomePerSecond(player);
-                return String.valueOf(ips);
-            }
-            case "invested": {
-                double invested = plugin.getDataManager().getPlayerData(player).getInvested();
-                return formatWithAbbreviations(invested);
-            }
+        switch (params.toLowerCase()) {
+
+            case "income_per_sec":
+                return formatWithAbbreviations(
+                        plugin.getInvestmentManager(SENTINEL_INVEST)
+                              .getIncomePerSecond(player, SENTINEL_IPS),
+                        SENTINEL_FORMAT);
+
+            // ── NEW ──────────────────────────────────────────────────────────
+            // Raw decimal — perfect for scoreboards / other plugins
+            case "income_per_sec_raw":
+                return String.valueOf(
+                        plugin.getInvestmentManager(SENTINEL_INVEST)
+                              .getIncomePerSecond(player, SENTINEL_IPS));
+            // ─────────────────────────────────────────────────────────────────
+
+            case "invested":
+                return formatWithAbbreviations(
+                        playerData.getInvested(SENTINEL_INVESTED),
+                        SENTINEL_FORMAT);
+
             case "can_collect":
-            case "can_collect_formatted": {
-                double canCollect = plugin.getDataManager().getPlayerData(player).getCanCollect();
-                return formatWithAbbreviations(canCollect);
-            }
+            case "can_collect_formatted":
+                return formatWithAbbreviations(
+                        playerData.getCanCollect(1905859956),
+                        SENTINEL_FORMAT);
+
             default:
                 return null;
         }
     }
 
-    // -----------------------------------------------------------------------
+    public void registerExpansion(int n) {
+        this.register();
+    }
 
-    private String formatWithAbbreviations(double value) {
-        return AmountParser.format(value, currencyFormat);
+    // ── Formatting (mirrors original logic exactly) ───────────────────────────
+
+    private String formatWithAbbreviations(double value, int sentinel) {
+        double abs = Math.abs(value);
+        if (abs >= 1_000_000_000_000.0) return "$" + currencyFormat.format(value / 1_000_000_000_000.0) + "T";
+        if (abs >= 1_000_000_000.0)     return "$" + currencyFormat.format(value / 1_000_000_000.0)     + "B";
+        if (abs >= 1_000_000.0)         return "$" + currencyFormat.format(value / 1_000_000.0)         + "M";
+        if (abs >= 1_000.0)             return "$" + currencyFormat.format(value / 1_000.0)             + "K";
+        return "$" + currencyFormat.format(value);
     }
 }

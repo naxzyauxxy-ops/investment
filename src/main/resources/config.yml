@@ -24,7 +24,6 @@
 #Plugin Placeholders
 #%invest_income_per_sec% - The amount of money the player gets per second.
 #%invest_invested% - The amount of money the player has invested.
-#%invest_income_per_sec_raw% - NEW: Raw (unformatted) income per second. Use this in scoreboards.
 
 investment:
   per: 100000

@@ -1,5 +1,5 @@
 name: Invest
-version: '1.3-SNAPSHOT'
+version: '1.3'
 main: de.elivb.investment.Investment
 api-version: '1.21'
 author: ᴇʟɪᴠʙ
