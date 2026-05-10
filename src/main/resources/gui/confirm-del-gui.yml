@@ -1,0 +1,22 @@
+confirm-del-gui:
+  rows: 3
+  title: "&8ᴅᴇʟᴇᴛᴇ ɪɴᴠᴇꜱᴛᴍᴇɴᴛ"
+  confirm-del:
+    slot: 15
+    material: LIME_STAINED_GLASS_PANE
+    displayname: '&#04fc04ᴄᴏɴғɪʀᴍ'
+    lore:
+      - "&fClick to confirm"
+  info:
+    slot: 13
+    material: PAPER
+    displayname: '&#00fc88ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ'
+    lore:
+      - "&fthat you want to delete?"
+      - "&fCurrent: &#00fc88%current_investment%"
+  decline-del:
+    displayname: '&#fc0404ᴄᴀɴᴄᴇʟ'
+    slot: 11
+    material: RED_STAINED_GLASS_PANE
+    lore:
+      - "&fClick to go back"

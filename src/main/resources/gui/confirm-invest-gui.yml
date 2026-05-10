@@ -1,0 +1,22 @@
+confirm-invest-gui:
+  title: "&8ᴄᴏɴꜰɪʀᴍ ɪɴᴠᴇꜱᴛᴍᴇɴᴛ"
+  rows: 3
+  confirm-invest:
+    slot: 15
+    material: LIME_STAINED_GLASS_PANE
+    displayname: '&#04fc04ᴄᴏɴғɪʀᴍ'
+    lore:
+      - "&fClick to confirm"
+  decline-invest:
+    displayname: '&#fc0404ᴄᴀɴᴄᴇʟ'
+    slot: 11
+    material: RED_STAINED_GLASS_PANE
+    lore:
+      - "&fClick to go back"
+  price:
+    slot: 13
+    material: PAPER
+    displayname: '&#00fc88ᴘʀɪᴄᴇ'
+    lore:
+      - "&fClick to type the price"
+      - "&fCurrent: &#00fc88%current_investment%"

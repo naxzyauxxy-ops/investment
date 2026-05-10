@@ -1,0 +1,70 @@
+####################################################################
+####################################################################
+####################################################################
+#██    ██ ██    ██ ██      ██ ███    ███  █████  ██ ████████ ███████
+#██    ██ ██    ██ ██      ██ ████  ████ ██   ██ ██    ██    ██
+#██    ██ ██    ██ ██      ██ ██ ████ ██ ███████ ██    ██    █████
+#██  ██   ██  ██  ██      ██ ██  ██  ██ ██   ██ ██    ██    ██
+#████     ████   ███████ ██ ██      ██ ██   ██ ██    ██    ███████
+####################################################################
+####################################################################
+####################################################################
+
+#This Plugin is from EliVB
+
+#This is a Plugin Investment, you can change all of the messages here.
+#For more Premium Skripts or Plugins join our Discord: "https://discord.gg/V3fcWZrccj"
+
+#permissions
+#investment.use - Allows the player to use the invest command.
+#investment.admin - Allows the player to use the admin commands like reload.
+#investment.autocollect - Allows the player to automatically collect their money every time they log in.
+#investment.vip - Allows the player to get more money per second and a higher max invest.
+
+#Plugin Placeholders
+#%invest_income_per_sec% - The amount of money the player gets per second.
+#%invest_invested% - The amount of money the player has invested.
+#%invest_income_per_sec_raw% - NEW: Raw (unformatted) income per second. Use this in scoreboards.
+
+investment:
+  per: 100000
+  per-add: 1
+max-invest: 10000000000
+min-invest: 1000
+
+economy:
+  provider: VAULT
+  currency-format: "#,##0.##"
+  abbreviations:
+    enabled: true #Accept 100k, 10k, 1m, etc... in the sign of price.
+    formats:
+      - 'K'
+      - 'M'
+      - 'B'
+      - 'T'
+
+chat-input:
+  SignAPI: true
+  ChatAPI: false
+
+vip-perm:
+  enabled: true
+  max-invest: 1000000000000
+  per-add: 2
+
+autocollect-perm:
+    enabled: true
+
+sign-gui:
+  - ""
+  - "↑↑↑↑↑↑↑↑↑↑↑↑↑"
+  - "   Money    "
+  - "             "
+
+sounds:
+  click:
+    sound: ui.button.click
+  reload:
+    sound: block.note_block.pling
+  get-money:
+    sound: entity.player.levelup

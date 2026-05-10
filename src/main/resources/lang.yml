@@ -1,0 +1,42 @@
+prefix-enabled: true
+prefix: '&#00fc88ɪɴᴠᴇꜱᴛ &7» '
+
+messages:
+  reload: "&aInvestment Plugin Reloaded!"
+  no-permission: "&cYou don't have permission to do this!"
+  not-a-player: "Only players can do this!"
+  invest:
+    - "&#00fc88How to invest:"
+    - "&f(10K, 25M, 1B, etc.)"
+    - "&#00fc88Type the amount that you want to invest"
+  invest-deleted: "&cYour investments have been deleted!"
+  nothing-to-collect: "&cYou don't have any money to collect!"
+  invest-success: "&fYou have invested &#00fc88%amount-invested%!"
+  input-cancelled: "&cInput cancelled!"
+  invalid-amount: "&cInvalid amount!"
+  no-money: "&cYou don't have enough money!"
+  max-invest-reached: "&cYou have reached the limit! &7(%max-invest%)"
+  invest-price-set: "&fInvest set to &#00fc88%price%&f!"
+  usage: "&cUsage: %usage%"
+  player-not-found: "&cPlayer not found!"
+  invest-reset: "&aYou reset the invest successfully!"
+  min-invest-error: "&fThe minimum investment is &c%min-invest%&f!"
+
+investment-got:
+  module:
+    chat:
+      enabled: false
+      message:
+        - ""
+    actionbar:
+      enabled: true
+      message:
+        - "&#00fc88+%amount%"
+    title:
+      enabled: true
+      message:
+        - "&#00fc88+%amount%"
+    subtitle:
+      enabled: false
+      message:
+        - ""

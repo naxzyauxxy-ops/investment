@@ -1,0 +1,61 @@
+gui-settings:
+  titel: "&8ɪɴᴠᴇꜱᴛᴍᴇɴᴛ"
+  rows: 3
+  filler-item:
+    enable: false
+    material: "GRAY_STAINED_GLASS_PANE"
+    name: " "
+delete-investments:
+  item: TNT
+  slot: 11
+  glow: false
+  name: "&#00fc88ᴅᴇʟᴇᴛᴇ"
+  lore:
+    - "&8Description"
+    - ""
+    - "&#00fc88Information:"
+    - "&f100% of your investments will"
+    - "&fbe deleted. You will not get"
+    - "&fYour money back"
+information:
+  item: KNOWLEDGE_BOOK
+  slot: 13
+  glow: false
+  name: "&#00fc88ɪɴꜰᴏʀᴍᴀᴛɪᴏɴ"
+  lore:
+    - "&8Description"
+    - ""
+    - "&#00fc88Information:"
+    - "&#00fc88$ &fInvested: &#00fc88%amount-invested%"
+    - "&#00fc88$ &fIncome: &#00fc88%amount-income%/s"
+collect-income:
+  item: HOPPER_MINECART
+  glow: false
+  slot: 15
+  name: "&#00fc88ᴄᴏʟʟᴇᴄᴛ ɪɴᴄᴏᴍᴇ"
+  lore:
+    - "&8Description"
+    - " "
+    - "&#00fc88Information:"
+    - "&fClick here to collect"
+    - "&fall the money generated"
+    - ""
+    - "&#00fc88$ &fGenerated: &#00fc88%amount-can-collect_formatted%"
+auto-collect:
+  item-on: LIME_STAINED_GLASS_PANE
+  item-off: RED_STAINED_GLASS_PANE
+  glow: false
+  slot: 24
+  auto-collect-on-status: "&#00fc88ᴏɴ"
+  auto-collect-off-status: "&#00fc88ᴏꜰꜰ"
+  on-status-auto-collect: "&#00fc88ᴀᴜᴛᴏᴄᴏʟʟᴇᴄᴛ"
+  off-status-auto-collect: "&#00fc88ᴀᴜᴛᴏᴄᴏʟʟᴇᴄᴛ"
+  on-status-click: "disable"
+  off-status-click: "enable"
+  name: "%status-auto-collect% %status%"
+  lore:
+    - "&8Description"
+    - ""
+    - "&#00fc88Information:"
+    - "&fAutomatically collect"
+    - "&fIncome to your balance"

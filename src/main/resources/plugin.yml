@@ -1,0 +1,22 @@
+name: Invest
+version: '1.3-SNAPSHOT'
+main: de.elivb.investment.Investment
+api-version: '1.21'
+author: ᴇʟɪᴠʙ
+website: https://discord.gg/kEDAdrFRYa
+description: ɪɴᴠᴇꜱᴛᴍᴇɴᴛ ᴘʟᴜɢɪɴ
+folia-supported: true
+
+commands:
+  invest:
+    aliases: [investment]
+
+permissions:
+  investment.use:
+    default: true
+  investment.admin:
+    default: op
+  investment.autocollect:
+    default: false
+  investment.vip:
+    default: false
