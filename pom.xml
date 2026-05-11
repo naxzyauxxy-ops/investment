@@ -20,38 +20,44 @@
         <plugins>
 
             <!--
-                Step 1: Unpack the original v1.2 JAR into target/classes BEFORE compile.
-                - All original classes land in target/classes first.
-                - Compiler then writes our patched classes on top — our versions win.
-                - maven-jar-plugin packages everything in target/classes = final JAR
-                  contains original classes + our new/patched ones. No shade needed.
+                Step 1: Use Ant's <unzip> to extract the original JAR directly from
+                lib/Invest-original.jar into target/classes — no Maven artifact
+                resolution involved, just a plain file operation.
+                Our patched classes (SignManager, PlaceholderManager) are excluded
+                so the compiler can write the new versions on top.
+                Runs at generate-sources, before the compiler fires.
             -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <version>3.6.1</version>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
                 <executions>
                     <execution>
-                        <id>unpack-original</id>
+                        <id>unpack-original-jar</id>
                         <phase>generate-sources</phase>
-                        <goals><goal>unpack</goal></goals>
+                        <goals><goal>run</goal></goals>
                         <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>de.elivb</groupId>
-                                    <artifactId>Invest-original</artifactId>
-                                    <version>1.2</version>
-                                    <type>jar</type>
-                                    <overWrite>true</overWrite>
-                                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                                    <excludes>META-INF/*.SF,META-INF/*.DSA,META-INF/*.RSA,META-INF/maven/**,de/elivb/investment/managers/SignManager.class,de/elivb/investment/managers/SignManager$SignSession.class,de/elivb/investment/managers/PlaceholderManager.class,*.yml,gui/*.yml</excludes>
-                                </artifactItem>
-                            </artifactItems>
+                            <target>
+                                <mkdir dir="${project.build.outputDirectory}"/>
+                                <unzip src="${project.basedir}/lib/Invest-original.jar"
+                                       dest="${project.build.outputDirectory}"
+                                       overwrite="true">
+                                    <patternset>
+                                        <!-- Include all class files from the original -->
+                                        <include name="**/*.class"/>
+                                        <!-- Exclude classes we are replacing with patched versions -->
+                                        <exclude name="de/elivb/investment/managers/SignManager.class"/>
+                                        <exclude name="de/elivb/investment/managers/SignManager$SignSession.class"/>
+                                        <exclude name="de/elivb/investment/managers/PlaceholderManager.class"/>
+                                    </patternset>
+                                </unzip>
+                            </target>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
 
+            <!-- Step 2: Compile our 4 new/patched source files -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -65,6 +71,7 @@
                 </configuration>
             </plugin>
 
+            <!-- Step 3: Package everything in target/classes into the final JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
@@ -102,6 +109,11 @@
     </repositories>
 
     <dependencies>
+        <!--
+            The original JAR as a system-scoped dep — used ONLY so the compiler
+            can resolve the existing classes during compilation of our new files.
+            The actual classes come from the antrun unzip above, not from this dep.
+        -->
         <dependency>
             <groupId>de.elivb</groupId>
             <artifactId>Invest-original</artifactId>
@@ -109,6 +121,7 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/Invest-original.jar</systemPath>
         </dependency>
+
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
