@@ -6,15 +6,13 @@ import de.elivb.investment.util.AmountParser;
 import org.bukkit.entity.Player;
 
 /**
- * WithdrawManager v1.3 — partial income withdrawal.
+ * WithdrawManager v1.3 — partial income withdrawal via sign input.
  *
  * When auto-collect is DISABLED, clicking "Collect Income" opens the sign editor
  * so the player can type exactly how much to withdraw: 1k, 2.5m, all, etc.
- * Abbreviations follow the same economy.abbreviations config as investing.
  */
 public class WithdrawManager {
 
-    // Sentinel ints taken from original call-sites in decompiled bytecode
     private static final int S_CONFIG      = 1690924632;
     private static final int S_DATA        = 1817610083;
     private static final int S_ECONOMY     = 6722847;
@@ -29,7 +27,6 @@ public class WithdrawManager {
     private static final int S_OPEN_INV    = 187107641;
     private static final int S_MSG         = 1774950920;
     private static final int S_COLOR       = 1545345783;
-    private static final int S_CURRENCY    = 1924836892;
 
     private final Investment plugin;
 
@@ -37,7 +34,7 @@ public class WithdrawManager {
         this.plugin = plugin;
     }
 
-    /** Call this when player clicks Collect Income with auto-collect OFF. */
+    /** Called when a player with auto-collect OFF clicks Collect Income. */
     public void openWithdrawInput(Player player) {
         double canCollect = plugin.getDataManager(S_DATA)
                                   .getPlayerData(player, S_PLAYER_DATA)
@@ -51,16 +48,12 @@ public class WithdrawManager {
         String maxFmt = plugin.getEconomyManager(S_ECONOMY)
                               .formatMoney(canCollect, S_FORMAT);
 
-        // Build hint lines — use (Player, Player, String[], BiConsumer) overload
-        String[] lines = { "", "\u2191 Amount \u2191", "Max: " + maxFmt, "" };
-
-        // openSignEditor(Player p0, Player p2, String[] p3, BiConsumer p4)
+        // Use (Player, String, BiConsumer) overload — hint shown on sign line 0
+        String hint = "Max: " + maxFmt;
         plugin.getSignManager(S_SIGN_MGR)
-              .openSignEditor(player, player, lines,
+              .openSignEditor(player, hint,
                       (p, input) -> handleInput(p, input, canCollect));
     }
-
-    // ── Private ───────────────────────────────────────────────────────────────
 
     private void handleInput(Player player, String input, double snapshotMax) {
         if (input == null || input.isBlank()) {
@@ -80,7 +73,7 @@ public class WithdrawManager {
             return;
         }
 
-        // Re-fetch in case it changed while sign was open
+        // Re-fetch in case income ticked while sign was open
         double current = plugin.getDataManager(S_DATA)
                                .getPlayerData(player, S_PLAYER_DATA)
                                .getCanCollect(S_CAN_COLLECT);
@@ -92,10 +85,9 @@ public class WithdrawManager {
                                         .openInventory(player, S_OPEN_INV));
             return;
         }
-        if (amount > current) amount = current; // clamp
+        if (amount > current) amount = current;
 
         final double finalAmount = amount;
-
         schedule(player, () -> {
             if (!player.isOnline()) return;
 
@@ -124,7 +116,7 @@ public class WithdrawManager {
     }
 
     private void sendMsg(Player player, String key) {
-        String msg = plugin.getConfigManager(S_CONFIG).getMessage(key, S_MSG);
+        String msg    = plugin.getConfigManager(S_CONFIG).getMessage(key, S_MSG);
         String prefix = plugin.getConfigManager(S_CONFIG).isPrefixEnabled()
                         ? plugin.getConfigManager(S_CONFIG).getPrefix() : "";
         if (msg == null) msg = key;
@@ -132,6 +124,6 @@ public class WithdrawManager {
     }
 
     private void schedule(Player player, Runnable task) {
-        plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> task.run());
+        player.getScheduler().run(plugin, t -> task.run(), null);
     }
 }
