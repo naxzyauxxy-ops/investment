@@ -8,8 +8,8 @@ import org.bukkit.entity.Player;
 /**
  * WithdrawManager v1.3 — partial income withdrawal via sign input.
  *
- * When auto-collect is DISABLED, clicking "Collect Income" opens the sign editor
- * so the player can type exactly how much to withdraw: 1k, 2.5m, all, etc.
+ * When auto-collect is DISABLED, the collect button opens the sign editor
+ * so the player can type how much to withdraw: 1k, 2.5m, all, etc.
  */
 public class WithdrawManager {
 
@@ -30,40 +30,41 @@ public class WithdrawManager {
 
     private final Investment plugin;
 
-    public WithdrawManager(Investment plugin) {
+    public WithdrawManager(final Investment plugin) {
         this.plugin = plugin;
     }
 
-    /** Called when a player with auto-collect OFF clicks Collect Income. */
-    public void openWithdrawInput(Player player) {
-        double canCollect = plugin.getDataManager(S_DATA)
-                                  .getPlayerData(player, S_PLAYER_DATA)
-                                  .getCanCollect(S_CAN_COLLECT);
+    /** Open the partial-withdraw sign input for a player. */
+    public void openWithdrawInput(final Player player) {
+        final double canCollect = plugin.getDataManager(S_DATA)
+                                        .getPlayerData(player, S_PLAYER_DATA)
+                                        .getCanCollect(S_CAN_COLLECT);
 
         if (canCollect <= 0) {
             sendMsg(player, "nothing-to-collect");
             return;
         }
 
-        String maxFmt = plugin.getEconomyManager(S_ECONOMY)
-                              .formatMoney(canCollect, S_FORMAT);
+        final String maxFmt = plugin.getEconomyManager(S_ECONOMY)
+                                    .formatMoney(canCollect, S_FORMAT);
 
-        // Use (Player, String, BiConsumer) overload — hint shown on sign line 0
-        String hint = "Max: " + maxFmt;
+        // Use (Player, String, BiConsumer) overload — shows hint on line 0
         plugin.getSignManager(S_SIGN_MGR)
-              .openSignEditor(player, hint,
+              .openSignEditor(player, "Max: " + maxFmt,
                       (p, input) -> handleInput(p, input, canCollect));
     }
 
-    private void handleInput(Player player, String input, double snapshotMax) {
+    private void handleInput(final Player player, final String input,
+                             final double snapshotMax) {
         if (input == null || input.isBlank()) {
             schedule(player, () -> plugin.getMainGUI(S_MAIN_GUI)
                                         .openInventory(player, S_OPEN_INV));
             return;
         }
 
-        boolean abbrev = plugin.getConfigManager(S_CONFIG).isAbbreviationsEnabled(S_CONFIG);
-        Double parsed  = AmountParser.parse(input,
+        final boolean abbrev = plugin.getConfigManager(S_CONFIG)
+                                     .isAbbreviationsEnabled(S_CONFIG);
+        final Double parsed = AmountParser.parse(input,
                 plugin.getConfigManager(S_CONFIG).getAbbreviationFormats(), abbrev);
 
         if (parsed == null) {
@@ -74,9 +75,9 @@ public class WithdrawManager {
         }
 
         // Re-fetch in case income ticked while sign was open
-        double current = plugin.getDataManager(S_DATA)
-                               .getPlayerData(player, S_PLAYER_DATA)
-                               .getCanCollect(S_CAN_COLLECT);
+        final double current = plugin.getDataManager(S_DATA)
+                                     .getPlayerData(player, S_PLAYER_DATA)
+                                     .getCanCollect(S_CAN_COLLECT);
 
         double amount = (parsed == AmountParser.ALL) ? current : parsed;
         if (amount <= 0) {
@@ -91,22 +92,22 @@ public class WithdrawManager {
         schedule(player, () -> {
             if (!player.isOnline()) return;
 
-            DataManager.PlayerData pd = plugin.getDataManager(S_DATA)
-                                              .getPlayerData(player, S_PLAYER_DATA);
+            final DataManager.PlayerData pd = plugin.getDataManager(S_DATA)
+                                                    .getPlayerData(player, S_PLAYER_DATA);
 
             plugin.getEconomyManager(S_ECONOMY).depositMoney(player, finalAmount, S_DEPOSIT);
 
-            double remaining = Math.max(0, pd.getCanCollect(S_CAN_COLLECT) - finalAmount);
+            final double remaining = Math.max(0, pd.getCanCollect(S_CAN_COLLECT) - finalAmount);
             pd.setCanCollect(remaining, S_SET_COLLECT);
             plugin.getDataManager(S_DATA).savePlayer(player, S_SAVE_PLAYER);
 
-            String formatted = plugin.getEconomyManager(S_ECONOMY)
-                                     .formatMoney(finalAmount, S_FORMAT);
-            String prefix = plugin.getConfigManager(S_CONFIG).isPrefixEnabled()
-                            ? plugin.getConfigManager(S_CONFIG).getPrefix() : "";
-            String collectMsg = plugin.getConfigManager(S_CONFIG)
-                                      .getMessage("collect-income", S_MSG);
-            if (collectMsg != null) {
+            final String formatted = plugin.getEconomyManager(S_ECONOMY)
+                                           .formatMoney(finalAmount, S_FORMAT);
+            final String prefix = plugin.getConfigManager(S_CONFIG).isPrefixEnabled()
+                                  ? plugin.getConfigManager(S_CONFIG).getPrefix() : "";
+            final String collectMsg = plugin.getConfigManager(S_CONFIG)
+                                           .getMessage("collect-income", S_MSG);
+            if (collectMsg != null && !collectMsg.isEmpty()) {
                 player.sendMessage(HexColorCode.translateAllColorCodes(
                         prefix + collectMsg.replace("{amount}", formatted), S_COLOR));
             }
@@ -115,15 +116,15 @@ public class WithdrawManager {
         });
     }
 
-    private void sendMsg(Player player, String key) {
+    private void sendMsg(final Player player, final String key) {
         String msg    = plugin.getConfigManager(S_CONFIG).getMessage(key, S_MSG);
-        String prefix = plugin.getConfigManager(S_CONFIG).isPrefixEnabled()
-                        ? plugin.getConfigManager(S_CONFIG).getPrefix() : "";
+        final String prefix = plugin.getConfigManager(S_CONFIG).isPrefixEnabled()
+                              ? plugin.getConfigManager(S_CONFIG).getPrefix() : "";
         if (msg == null) msg = key;
         player.sendMessage(HexColorCode.translateAllColorCodes(prefix + msg, S_COLOR));
     }
 
-    private void schedule(Player player, Runnable task) {
+    private void schedule(final Player player, final Runnable task) {
         player.getScheduler().run(plugin, t -> task.run(), null);
     }
 }

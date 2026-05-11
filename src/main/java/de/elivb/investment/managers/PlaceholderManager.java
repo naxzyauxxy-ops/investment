@@ -1,6 +1,7 @@
 package de.elivb.investment.managers;
 
 import de.elivb.investment.Investment;
+import de.elivb.investment.listeners.GUIListenerPatch;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -12,19 +13,26 @@ import java.text.DecimalFormat;
  *
  * All signatures match original exactly.
  *
- * NEW: %invest_income_per_sec_raw% — raw decimal income/s, no formatting.
- * Use in scoreboards: returns "1500000.0" instead of "$1.5M".
+ * Also registers GUIListenerPatch from the constructor (called from
+ * Investment.onEnable right after GUIListener) so the partial-withdraw
+ * hook is active without needing to modify Investment.java.
+ *
+ * NEW: %invest_income_per_sec_raw% — plain decimal income/s, no formatting.
  */
 public class PlaceholderManager extends PlaceholderExpansion {
 
     private final Investment    plugin;
     private final DecimalFormat currencyFormat;
 
-    // Must be (Investment, int) to match Investment.onEnable() call site
     public PlaceholderManager(final Investment plugin, final int n) {
         this.plugin = plugin;
         this.currencyFormat = new DecimalFormat(
                 plugin.getConfigManager(1690924632).getCurrencyFormat(1924836892));
+
+        // Register the GUIListener patch so partial-withdraw works.
+        // This is safe here — called from Investment.onEnable on the main thread,
+        // right after GUIListener is registered.
+        new GUIListenerPatch(plugin);
     }
 
     @Override public @NotNull String getIdentifier() { return "invest"; }
@@ -44,10 +52,9 @@ public class PlaceholderManager extends PlaceholderExpansion {
                 return fmt(plugin.getInvestmentManager(1343384936)
                                .getIncomePerSecond(player, 765425982));
 
-            // NEW — raw decimal, perfect for scoreboards
             case "income_per_sec_raw":
                 return String.valueOf(plugin.getInvestmentManager(1343384936)
-                                          .getIncomePerSecond(player, 765425982));
+                                           .getIncomePerSecond(player, 765425982));
 
             case "invested":
                 return fmt(pd.getInvested(1445869333));
@@ -61,16 +68,13 @@ public class PlaceholderManager extends PlaceholderExpansion {
         }
     }
 
-    // Must keep same signatures as original
     public void registerExpansion(final int n)   { this.register(); }
     public void unregisterExpansion(final int n) { this.unregister(); }
 
-    private String formatWithAbbreviations(final double value, final int n) {
-        return fmt(value);
-    }
+    private String formatWithAbbreviations(final double value, final int n) { return fmt(value); }
 
-    private String fmt(double value) {
-        double abs = Math.abs(value);
+    private String fmt(final double value) {
+        final double abs = Math.abs(value);
         if (abs >= 1_000_000_000_000.0) return "$" + currencyFormat.format(value / 1_000_000_000_000.0) + "T";
         if (abs >= 1_000_000_000.0)     return "$" + currencyFormat.format(value / 1_000_000_000.0)     + "B";
         if (abs >= 1_000_000.0)         return "$" + currencyFormat.format(value / 1_000_000.0)         + "M";
