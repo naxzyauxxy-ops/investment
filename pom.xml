@@ -18,6 +18,40 @@
     <build>
         <defaultGoal>clean package</defaultGoal>
         <plugins>
+
+            <!--
+                Step 1: Unpack the original v1.2 JAR into target/classes BEFORE compile.
+                - All original classes land in target/classes first.
+                - Compiler then writes our patched classes on top — our versions win.
+                - maven-jar-plugin packages everything in target/classes = final JAR
+                  contains original classes + our new/patched ones. No shade needed.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>unpack-original</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>unpack</goal></goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>de.elivb</groupId>
+                                    <artifactId>Invest-original</artifactId>
+                                    <version>1.2</version>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                                    <excludes>META-INF/*.SF,META-INF/*.DSA,META-INF/*.RSA,META-INF/maven/**,de/elivb/investment/managers/SignManager.class,de/elivb/investment/managers/SignManager$SignSession.class,de/elivb/investment/managers/PlaceholderManager.class,*.yml,gui/*.yml</excludes>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -25,54 +59,29 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <compilerArgs>
+                        <arg>-proc:none</arg>
+                    </compilerArgs>
                 </configuration>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.3</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals><goal>shade</goal></goals>
-                        <configuration>
-                            <createDependencyReducedPom>false</createDependencyReducedPom>
-                            <!--
-                                includeSystemScope=true pulls in the system-scoped
-                                Invest-original.jar so its classes end up in the final JAR.
-                                Our patched classes (SignManager, PlaceholderManager) override
-                                the originals via the exclusion filter below.
-                            -->
-                            <includeSystemScope>true</includeSystemScope>
-                            <artifactSet>
-                                <includes>
-                                    <include>de.elivb:Invest-original</include>
-                                </includes>
-                            </artifactSet>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                        <!-- Our patched classes override the originals -->
-                                        <exclude>de/elivb/investment/managers/SignManager*.class</exclude>
-                                        <exclude>de/elivb/investment/managers/PlaceholderManager.class</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
-                </executions>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <addMavenDescriptor>false</addMavenDescriptor>
+                    </archive>
+                </configuration>
             </plugin>
+
         </plugins>
 
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-                <filtering>true</filtering>
+                <filtering>false</filtering>
             </resource>
         </resources>
     </build>
@@ -90,14 +99,9 @@
             <id>placeholderapi</id>
             <url>https://repo.extendedclip.com/content/repositories/placeholderapi/</url>
         </repository>
-        <repository>
-            <id>maven-central</id>
-            <url>https://repo.maven.apache.org/maven2</url>
-        </repository>
     </repositories>
 
     <dependencies>
-        <!-- Original JAR — provides all existing classes at compile time -->
         <dependency>
             <groupId>de.elivb</groupId>
             <artifactId>Invest-original</artifactId>
@@ -105,32 +109,24 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/Invest-original.jar</systemPath>
         </dependency>
-
-        <!-- Server API -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
             <version>1.21.1-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- PlaceholderAPI -->
         <dependency>
             <groupId>me.clip</groupId>
             <artifactId>placeholderapi</artifactId>
             <version>2.11.6</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- Vault -->
         <dependency>
             <groupId>com.github.MilkBowl</groupId>
             <artifactId>VaultAPI</artifactId>
             <version>1.7</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- MySQL -->
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
