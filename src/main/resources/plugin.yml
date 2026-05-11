@@ -2,9 +2,7 @@ name: Invest
 version: '1.3'
 main: de.elivb.investment.Investment
 api-version: '1.21'
-author: ᴇʟɪᴠʙ
-website: https://discord.gg/kEDAdrFRYa
-description: ɪɴᴠᴇꜱᴛᴍᴇɴᴛ ᴘʟᴜɢɪɴ
+author: EliVB
 folia-supported: true
 
 commands:
