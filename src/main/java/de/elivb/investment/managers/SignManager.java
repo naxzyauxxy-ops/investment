@@ -23,72 +23,79 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 
 /**
- * SignManager — virtual sign input API.
+ * SignManager v1.3 — fixed sign editor that opens reliably every time.
  *
- * BUG FIX (sign not always opening):
- *   The original code placed a temp OAK_SIGN at the player's current foot block
- *   and opened the editor via EntityScheduler.run(). Two race conditions caused
- *   intermittent failures on Folia:
- *     1. The player's foot block may be non-air, so setType() silently fails or
- *        the resulting BlockState is not a Sign.
- *     2. EntityScheduler.run() can be skipped if the entity chunk region isn't
- *        ticked yet at that moment.
+ * Constructor and ALL public method signatures exactly match the original
+ * so Investment.onEnable() can construct and call us without NoSuchMethodError.
  *
- *   Fix:
- *     • Place the temp sign 3 blocks ABOVE the player — always air, never contested.
- *     • Use GlobalRegionScheduler (region-independent, always fires on Folia).
- *     • Add a one-tick retry guard: if the Sign state isn't ready after the first
- *       tick, reschedule once more before giving up.
+ * BUG FIX: Original placed temp sign at player's feet (may be non-air) and
+ * used EntityScheduler (Folia can skip it). Fix: place 3 blocks above player
+ * (always air) + use GlobalRegionScheduler + one-tick retry guard.
  */
 public class SignManager implements Listener {
 
     private final Investment plugin;
     private final Map<UUID, SignSession> activeSessions = new HashMap<>();
-    private final Map<UUID, Location> signLocations    = new HashMap<>();
+    private final Map<UUID, Location>    signLocations  = new HashMap<>();
 
-    public SignManager(Investment plugin) {
+    // ── Constructor — must match original: (Investment, int) ─────────────────
+    public SignManager(final Investment plugin, final int n) {
         this.plugin = plugin;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
-    // ─── Public API (mirrors original signatures) ────────────────────────────
+    // ── Public API — signatures must exactly match originals ──────────────────
 
-    /** Open with no pre-filled lines. */
-    public void openSignEditor(Player player, BiConsumer<Player, String> callback) {
-        openSignEditorInternal(player, null, callback);
+    /**
+     * Main sign-editor entry point.
+     * Original signature: openSignEditor(Player p0, Player p2, String[] p3, BiConsumer p4)
+     * The second Player arg is how the obfuscator emitted the method; p0 is the real player.
+     */
+    public void openSignEditor(final Player player, final Player ignored,
+                               final String[] defaultLines,
+                               final BiConsumer<Player, String> callback) {
+        openSignEditorInternal(player, defaultLines, callback);
     }
 
-    /** Open with a single hint on line 0. */
-    public void openSignEditor(Player player, String hint, BiConsumer<Player, String> callback) {
+    /** openSignEditor(Player, String, BiConsumer) */
+    public void openSignEditor(final Player player, final String hint,
+                               final BiConsumer<Player, String> callback) {
         String[] lines = new String[4];
         if (hint != null && !hint.isEmpty()) lines[0] = hint;
         openSignEditorInternal(player, lines, callback);
     }
 
-    /** Open with full four-line control. */
-    public void openSignEditor(Player player, String[] defaultLines, BiConsumer<Player, String> callback) {
+    /** openSignEditor(Player, BiConsumer) */
+    public void openSignEditor(final Player player,
+                               final BiConsumer<Player, String> callback) {
+        openSignEditorInternal(player, null, callback);
+    }
+
+    /** openSignEditor(Player, String[], BiConsumer, int) — called internally by original code */
+    public void openSignEditor(final Player player, final String[] defaultLines,
+                               final BiConsumer<Player, String> callback, final int n) {
         openSignEditorInternal(player, defaultLines, callback);
     }
 
-    public void closeSession(Player player) {
-        UUID uuid = player.getUniqueId();
-        SignSession session  = activeSessions.remove(uuid);
-        Location    signLoc = signLocations.remove(uuid);
-        restoreBlock(signLoc, session);
+    /** closeSession(Player, int) */
+    public void closeSession(final Player player, final int n) {
+        UUID        uuid    = player.getUniqueId();
+        SignSession session = activeSessions.remove(uuid);
+        Location    loc     = signLocations.remove(uuid);
+        restoreBlock(loc, session);
     }
 
-    // ─── Internal ────────────────────────────────────────────────────────────
+    // ── Internal ──────────────────────────────────────────────────────────────
 
     private void openSignEditorInternal(Player player, String[] defaultLines,
                                         BiConsumer<Player, String> callback) {
-        // Cancel any existing session cleanly
-        closeSession(player);
+        closeSession(player, 0);
 
-        UUID uuid = player.getUniqueId();
+        UUID        uuid    = player.getUniqueId();
         SignSession session = new SignSession(callback, defaultLines);
         activeSessions.put(uuid, session);
 
-        // FIX: place 3 blocks above the player — guaranteed air, no collision
+        // FIX: 3 blocks above = always air, no block-placement conflicts
         Location signLoc = player.getLocation().clone().add(0, 3, 0);
         signLoc.setX(signLoc.getBlockX());
         signLoc.setY(signLoc.getBlockY());
@@ -101,12 +108,11 @@ public class SignManager implements Listener {
 
         signBlock.setType(Material.OAK_SIGN, false);
 
-        // FIX: GlobalRegionScheduler always fires regardless of which Folia region owns the chunk
+        // FIX: GlobalRegionScheduler — always fires on Folia, no region gating
         plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> {
             if (!player.isOnline() || !activeSessions.containsKey(uuid)) return;
-
             if (signBlock.getType() != Material.OAK_SIGN) {
-                // Not ready yet — retry one more tick
+                // Retry once more tick
                 plugin.getServer().getGlobalRegionScheduler().run(plugin, t2 -> {
                     if (player.isOnline() && activeSessions.containsKey(uuid))
                         tryOpenSign(player, uuid, signBlock, defaultLines);
@@ -120,18 +126,15 @@ public class SignManager implements Listener {
     private void tryOpenSign(Player player, UUID uuid, Block signBlock, String[] defaultLines) {
         BlockState state = signBlock.getState();
         if (!(state instanceof Sign sign)) {
-            // Block didn't become a Sign — abort and clean up
-            closeSession(player);
+            closeSession(player, 0);
             return;
         }
-
         if (defaultLines != null) {
             for (int i = 0; i < Math.min(defaultLines.length, 4); i++) {
                 if (defaultLines[i] != null) sign.setLine(i, defaultLines[i]);
             }
         }
         sign.update();
-
         plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> {
             if (player.isOnline() && activeSessions.containsKey(uuid)) {
                 player.openSign(sign);
@@ -143,7 +146,6 @@ public class SignManager implements Listener {
         if (loc == null || !loc.isWorldLoaded()) return;
         Block block = loc.getBlock();
         if (block.getType() != Material.OAK_SIGN) return;
-
         if (session != null && session.oldBlockType != null && session.oldBlockType != Material.AIR) {
             block.setType(session.oldBlockType);
             if (session.oldBlockData != null) block.setBlockData(session.oldBlockData);
@@ -152,7 +154,7 @@ public class SignManager implements Listener {
         }
     }
 
-    // ─── Events ──────────────────────────────────────────────────────────────
+    // ── Events ────────────────────────────────────────────────────────────────
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onSignChange(SignChangeEvent event) {
@@ -166,14 +168,12 @@ public class SignManager implements Listener {
         Location    loc     = signLocations.remove(uuid);
         restoreBlock(loc, session);
 
-        // Collect all non-default typed lines
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < event.getLines().length; i++) {
             String line = event.getLine(i);
             if (line == null || line.isEmpty()) continue;
             if (session.defaultLines != null && i < session.defaultLines.length
                     && line.equals(session.defaultLines[i])) continue;
-
             if (sb.length() > 0) sb.append("\n");
             sb.append(line);
         }
@@ -183,7 +183,6 @@ public class SignManager implements Listener {
         plugin.getServer().getGlobalRegionScheduler().run(plugin, t -> {
             if (!player.isOnline()) return;
             if (input.isEmpty()) {
-                // Empty — return to GUI
                 plugin.getMainGUI(837914895).openInventory(player, 187107641);
                 return;
             }
@@ -198,30 +197,26 @@ public class SignManager implements Listener {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK
                 && event.getAction() != Action.LEFT_CLICK_BLOCK) return;
         if (event.getClickedBlock() != null
-                && event.getClickedBlock().getType() == Material.OAK_SIGN) {
+                && event.getClickedBlock().getType() == Material.OAK_SIGN)
             event.setCancelled(true);
-        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onBlockBreak(BlockBreakEvent event) {
-        Player   player = event.getPlayer();
-        UUID     uuid   = player.getUniqueId();
-        Location loc    = signLocations.get(uuid);
-        if (loc == null) return;
-        if (loc.isWorldLoaded() && event.getBlock().getLocation().equals(loc)) {
+        Location loc = signLocations.get(event.getPlayer().getUniqueId());
+        if (loc != null && loc.isWorldLoaded()
+                && event.getBlock().getLocation().equals(loc))
             event.setCancelled(true);
-        }
     }
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        closeSession(event.getPlayer());
+        closeSession(event.getPlayer(), 759738250);
     }
 
-    // ─── Inner class ─────────────────────────────────────────────────────────
+    // ── Inner class — must match original: SignSession(BiConsumer, String[], int) ──
 
-    private static class SignSession {
+    static class SignSession {
         final BiConsumer<Player, String> callback;
         final String[]                   defaultLines;
         Material  oldBlockType = Material.AIR;
@@ -230,6 +225,11 @@ public class SignManager implements Listener {
         SignSession(BiConsumer<Player, String> callback, String[] defaultLines) {
             this.callback     = callback;
             this.defaultLines = defaultLines;
+        }
+
+        // Original inner class constructor takes (BiConsumer, String[], int)
+        SignSession(BiConsumer<Player, String> callback, String[] defaultLines, int n) {
+            this(callback, defaultLines);
         }
     }
 }
